@@ -76,6 +76,19 @@ class SolidLocaleMiddleware(LocaleMiddleware):
     def process_response(self, request, response):
         language = trans.get_language()
         language_from_path = get_language_from_path(request.path_info)
+
+        if hasattr(request, 'session') and request.session.get('django_language', None) is not None:
+            lang_in_session = True
+        else:
+            lang_in_session = False
+
+        if (settings.LANGUAGE_COOKIE_NAME not in request.COOKIES and not lang_in_session):
+            redirect_language = trans.get_language_from_request(request)
+            if redirect_language != language:
+                redirect = self.perform_redirect(request, redirect_language)
+                if redirect:
+                    return redirect
+
         if (getattr(settings, 'SOLID_I18N_DEFAULT_PREFIX_REDIRECT', False)
                 and language_from_path == self.default_lang
                 and self.is_language_prefix_patterns_used):
